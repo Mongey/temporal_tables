@@ -6,7 +6,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        ruby: ["2.5.x"]
+        gemfile: [
+          "Gemfile.5.0.mysql",
+          "Gemfile.5.1.mysql",
+          "Gemfile.5.2.mysql",
+          "Gemfile.6.0.mysql",
+          "Gemfile.5.1.pg",
+          "Gemfile.5.0.pg",
+          "Gemfile.5.2.pg",
+          "Gemfile.6.0.pg"
+        ]
     services:
       postgres:
         image: postgres:11.5
@@ -16,25 +28,26 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Set up Ruby 2.5.4
+    - name: Set up Ruby
       uses: actions/setup-ruby@v1
       with:
-        ruby-version: 2.5.4
+        ruby-version: ${{ matrix.ruby }}
 
-    - name: Install PostgreSQL 11 client
+    - name: Install PostgreSQL client
       run: |
         sudo apt-get -yqq install libpq-dev
 
     - name: Build App
       env:
+        GEMFILE: ${{ matrix.gemfile }}
         PGHOST: localhost
         PGUSER: postgres
         RAILS_ENV: test
       run: |
+        export BUNDLE_GEMFILE="${GITHUB_WORKSPACE}/gemfiles/${GEMFILE}"
         gem install bundler
         bundle install --jobs 4 --retry 3
         bin/rails db:setup
-
     - name: Run Tests
       env:
         PGHOST: localhost
